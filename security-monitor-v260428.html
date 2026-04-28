@@ -364,6 +364,15 @@
   </div>
 </div>
 
+<!-- ===== Ban Detail Modal ===== -->
+<div class="modal-overlay" id="banDetailModal">
+  <div class="modal" style="width:380px;">
+    <div class="modal-header"><h2>封禁详情</h2><button class="modal-close" onclick="closeModal('banDetailModal')">&times;</button></div>
+    <div class="modal-body" id="banDetailBody" style="font-size:13px;line-height:2;"></div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('banDetailModal')">关闭</button></div>
+  </div>
+</div>
+
 <script>
 // ===== Utility =====
 function formatNum(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
@@ -459,7 +468,20 @@ function coin_render() {
     var u = coin_data[i]; var b = u.banned; if (!b) ac++;
     var tr = document.createElement('tr'); if (b) tr.className = 'banned';
     var vipH = u.vip > 0 ? '<span class="tag tag-vip">VIP '+u.vip+'</span>' : '—';
-    var actH = b ? '<span style="color:#aaa;">已封禁</span>' : '<span class="action-link" onclick="coin_singleBan(\''+u.uid+'\')">封禁</span><span style="color:#d0d0d0;margin:0 4px;">|</span><span class="action-exempt" onclick="coin_exempt(\''+u.uid+'\')">豁免</span>';
+    var actH = '';
+    if (b) {
+      var bs = '';
+      if (u.banInfo) {
+        var lv = u.banInfo.levels;
+        if (lv.length === 1) { var m = {'uid':'UID','device':'设备','ip':'IP'}; bs = '已封' + (m[lv[0]]||lv[0]); }
+        else if (lv.length === 2) { bs = '已半封'; }
+        else if (lv.length >= 3) { bs = '已全封'; }
+        else { bs = '已封禁'; }
+      } else { bs = '已封禁'; }
+      actH = '<span style="color:#aaa;">'+bs+'</span> <span class="action-exempt" style="font-size:12px;cursor:pointer;" onclick="showBanDetail(\''+u.uid+'\',\'coin\')">详情</span>';
+    } else {
+      actH = '<span class="action-link" onclick="coin_singleBan(\''+u.uid+'\')">封禁</span><span style="color:#d0d0d0;margin:0 4px;">|</span><span class="action-exempt" onclick="coin_exempt(\''+u.uid+'\')">豁免</span>';
+    }
     tr.innerHTML = '<td><input type="checkbox" class="coin-rowck" data-uid="'+u.uid+'" '+(coin_sel[u.uid]?'checked ':'')+(b?'disabled':'')+' onchange="coin_toggle(\''+u.uid+'\')"></td><td class="uid-cell">'+u.uid+'</td><td>'+vipH+'</td><td><span class="tag tag-reason">'+u.triggerReason+'</span></td><td><span class="tag tag-count">'+u.triggerCount+'次</span></td><td style="font-size:12px;color:#888;">'+u.relatedUid+'</td><td style="font-family:monospace;font-size:12px;">'+u.deviceId+'</td><td>'+u.deviceType+'</td><td>'+u.appVersion+'</td><td>'+actH+'</td>';
     tbody.appendChild(tr);
   }
@@ -472,7 +494,7 @@ function coin_updateSel() { var c=0;for(var k in coin_sel)if(coin_sel[k])c++;doc
 function coin_find(uid) { for(var i=0;i<coin_data.length;i++)if(coin_data[i].uid===uid)return coin_data[i];return null; }
 function coin_singleBan(uid) { coin_pending=[uid]; var u=coin_find(uid);if(!u)return; document.getElementById('confirmTitle').textContent='确认封禁';document.getElementById('confirmMsg').textContent='确定要封禁以下用户吗？';document.getElementById('confirmList').innerHTML='<div class="confirm-list-item">UID: '+uid+' | 设备: '+u.deviceId+' | IP: '+u.ip+'</div>'; banCallback=coin_execBan; openModal('confirmModal'); }
 function coin_batchBan() { var a=[];for(var k in coin_sel)if(coin_sel[k])a.push(k);if(!a.length)return; coin_pending=a; document.getElementById('confirmTitle').textContent='确认批量封禁';document.getElementById('confirmMsg').textContent='确定要封禁以下 '+a.length+' 个用户吗？'; var h='';for(var i=0;i<a.length;i++){var u=coin_find(a[i]);if(u)h+='<div class="confirm-list-item">UID: '+a[i]+' | 设备: '+u.deviceId+' | IP: '+u.ip+'</div>';} document.getElementById('confirmList').innerHTML=h; banCallback=coin_execBan; openModal('confirmModal'); }
-function coin_execBan() { var fi=Math.random()<0.1?Math.floor(Math.random()*coin_pending.length):-1;var f=false;for(var i=0;i<coin_pending.length;i++){var u=coin_find(coin_pending[i]);if(!u)continue;if(i===fi){f=true;}else{u.banned=true;delete coin_sel[coin_pending[i]];}} closeModal('confirmModal');if(f)showToast('部分封禁失败（错误码: BAN_003）','error');else showToast('已成功封禁 '+coin_pending.length+' 个用户','success');coin_pending=[];coin_render(); }
+function coin_execBan() { var fi=Math.random()<0.1?Math.floor(Math.random()*coin_pending.length):-1;var f=false;var ls=[];var lcs=document.querySelectorAll('.confirm-banlevel:checked');for(var i=0;i<lcs.length;i++)ls.push(lcs[i].value);var dr=document.querySelector('input[name="confirm-duration"]:checked');var dur=dr?dr.value:'24h';if(dur==='custom'){var ch=parseInt(document.getElementById('confirm-customHours').value);dur=ch+'h';} for(var i=0;i<coin_pending.length;i++){var u=coin_find(coin_pending[i]);if(!u)continue;if(i===fi){f=true;}else{u.banned=true;u.banInfo={levels:ls,duration:dur};delete coin_sel[coin_pending[i]];}} closeModal('confirmModal');if(f)showToast('部分封禁失败（错误码: BAN_003）','error');else showToast('已成功封禁 '+coin_pending.length+' 个用户','success');coin_pending=[];coin_render(); }
 function coin_exempt(uid) { for(var i=0;i<coin_data.length;i++)if(coin_data[i].uid===uid){coin_data.splice(i,1);break;}delete coin_sel[uid];showToast('UID '+uid+' 已标记为误判豁免','success');coin_render(); }
 function coin_toggleThresholdType() { var h=document.querySelector('input[name="coin-thresholdType"][value="hour"]').checked; document.getElementById('coin-hourBox').style.display=h?'':'none'; document.getElementById('coin-dayBox').style.display=h?'none':''; }
 function coin_updateRealValue() { var hv=document.getElementById('coin-hourValue').value,hu=parseInt(document.getElementById('coin-hourUnit').value);var dv=document.getElementById('coin-dayValue').value,du=parseInt(document.getElementById('coin-dayUnit').value);document.getElementById('coin-hourReal').textContent=(hv&&parseInt(hv)>0)?'≈ '+formatNum(parseInt(hv)*hu)+' 金币':'';document.getElementById('coin-dayReal').textContent=(dv&&parseInt(dv)>0)?'≈ '+formatNum(parseInt(dv)*du)+' 金币':''; }
@@ -510,7 +532,20 @@ function api_render() {
     var u = api_data[i]; var b = u.banned; if (!b) ac++;
     var tr = document.createElement('tr'); if (b) tr.className = 'banned';
     var vipH = u.vip > 0 ? '<span class="tag tag-vip">VIP '+u.vip+'</span>' : '—';
-    var actH = b ? '<span style="color:#aaa;">已封禁</span>' : '<span class="action-link" onclick="api_singleBan(\''+u.uid+'\')">封禁</span><span style="color:#d0d0d0;margin:0 4px;">|</span><span class="action-exempt" onclick="api_exempt(\''+u.uid+'\')">豁免</span>';
+    var actH = '';
+    if (b) {
+      var bs = '';
+      if (u.banInfo) {
+        var lv = u.banInfo.levels;
+        if (lv.length === 1) { var m = {'uid':'UID','device':'设备','ip':'IP'}; bs = '已封' + (m[lv[0]]||lv[0]); }
+        else if (lv.length === 2) { bs = '已半封'; }
+        else if (lv.length >= 3) { bs = '已全封'; }
+        else { bs = '已封禁'; }
+      } else { bs = '已封禁'; }
+      actH = '<span style="color:#aaa;">'+bs+'</span> <span class="action-exempt" style="font-size:12px;cursor:pointer;" onclick="showBanDetail(\''+u.uid+'\',\'api\')">详情</span>';
+    } else {
+      actH = '<span class="action-link" onclick="api_singleBan(\''+u.uid+'\')">封禁</span><span style="color:#d0d0d0;margin:0 4px;">|</span><span class="action-exempt" onclick="api_exempt(\''+u.uid+'\')">豁免</span>';
+    }
     tr.innerHTML = '<td><input type="checkbox" class="api-rowck" data-uid="'+u.uid+'" '+(api_sel[u.uid]?'checked ':'')+(b?'disabled':'')+' onchange="api_toggle(\''+u.uid+'\')"></td><td class="uid-cell">'+u.uid+'</td><td>'+vipH+'</td><td><span class="tag tag-reason">'+u.triggerReason+'</span></td><td><span class="tag tag-count">'+u.triggerCount+'次</span></td><td style="font-size:12px;color:#888;">'+u.relatedUid+'</td><td style="font-family:monospace;font-size:12px;">'+u.deviceId+'</td><td><span class="tag tag-api">'+u.apiType+'</span></td><td>'+actH+'</td>';
     tbody.appendChild(tr);
   }
@@ -523,10 +558,29 @@ function api_updateSel() { var c=0;for(var k in api_sel)if(api_sel[k])c++;docume
 function api_find(uid) { for(var i=0;i<api_data.length;i++)if(api_data[i].uid===uid)return api_data[i];return null; }
 function api_singleBan(uid) { api_pending=[uid];var u=api_find(uid);if(!u)return;document.getElementById('confirmTitle').textContent='确认封禁';document.getElementById('confirmMsg').textContent='确定要封禁以下用户吗？';document.getElementById('confirmList').innerHTML='<div class="confirm-list-item">UID: '+uid+' | 设备: '+u.deviceId+' | IP: '+u.ip+' | 类型: '+u.apiType+'</div>';banCallback=api_execBan;openModal('confirmModal'); }
 function api_batchBan() { var a=[];for(var k in api_sel)if(api_sel[k])a.push(k);if(!a.length)return;api_pending=a;document.getElementById('confirmTitle').textContent='确认批量封禁';document.getElementById('confirmMsg').textContent='确定要封禁以下 '+a.length+' 个用户吗？';var h='';for(var i=0;i<a.length;i++){var u=api_find(a[i]);if(u)h+='<div class="confirm-list-item">UID: '+a[i]+' | 设备: '+u.deviceId+' | IP: '+u.ip+' | 类型: '+u.apiType+'</div>';}document.getElementById('confirmList').innerHTML=h;banCallback=api_execBan;openModal('confirmModal'); }
-function api_execBan() { var fi=Math.random()<0.1?Math.floor(Math.random()*api_pending.length):-1;var f=false;for(var i=0;i<api_pending.length;i++){var u=api_find(api_pending[i]);if(!u)continue;if(i===fi){f=true;}else{u.banned=true;delete api_sel[api_pending[i]];}}closeModal('confirmModal');if(f)showToast('部分封禁失败（错误码: BAN_003）','error');else showToast('已成功封禁 '+api_pending.length+' 个用户','success');api_pending=[];api_render(); }
+function api_execBan() { var fi=Math.random()<0.1?Math.floor(Math.random()*api_pending.length):-1;var f=false;var ls=[];var lcs=document.querySelectorAll('.confirm-banlevel:checked');for(var i=0;i<lcs.length;i++)ls.push(lcs[i].value);var dr=document.querySelector('input[name="confirm-duration"]:checked');var dur=dr?dr.value:'24h';if(dur==='custom'){var ch=parseInt(document.getElementById('confirm-customHours').value);dur=ch+'h';} for(var i=0;i<api_pending.length;i++){var u=api_find(api_pending[i]);if(!u)continue;if(i===fi){f=true;}else{u.banned=true;u.banInfo={levels:ls,duration:dur};delete api_sel[api_pending[i]];}}closeModal('confirmModal');if(f)showToast('部分封禁失败（错误码: BAN_003）','error');else showToast('已成功封禁 '+api_pending.length+' 个用户','success');api_pending=[];api_render(); }
 function api_exempt(uid) { for(var i=0;i<api_data.length;i++)if(api_data[i].uid===uid){api_data.splice(i,1);break;}delete api_sel[uid];showToast('UID '+uid+' 已标记为误判豁免','success');api_render(); }
 function api_openStrategy() { openModal('api-strategyModal'); }
 function api_saveStrategy() { var v=true;var x=parseInt(document.getElementById('api-thresholdX').value);var n=parseInt(document.getElementById('api-thresholdN').value);if(!x||x<2||x>1000||!n||n<1||n>100){document.getElementById('api-paramError').classList.add('show');v=false;}else{document.getElementById('api-paramError').classList.remove('show');}var ats=[];var acs=document.querySelectorAll('.api-apitype:checked');for(var i=0;i<acs.length;i++)ats.push(acs[i].value);if(!ats.length){document.getElementById('api-typeError').classList.add('show');v=false;}else{document.getElementById('api-typeError').classList.remove('show');}var ds=[];var dcs=document.querySelectorAll('.api-statdim:checked');for(var i=0;i<dcs.length;i++)ds.push(dcs[i].value);if(!ds.length){document.getElementById('api-dimError').classList.add('show');v=false;}else{document.getElementById('api-dimError').classList.remove('show');}if(!v)return;closeModal('api-strategyModal');showToast('接口异常监控策略已保存','success'); }
+
+function showBanDetail(uid, module) {
+  var data = module === 'coin' ? coin_data : api_data;
+  var u = null;
+  for (var i = 0; i < data.length; i++) { if (data[i].uid === uid) { u = data[i]; break; } }
+  if (!u || !u.banInfo) return;
+  var info = u.banInfo;
+  var html = '';
+  var map = {'uid':'封禁UID','device':'封禁设备','ip':'封禁IP'};
+  for (var k in map) {
+    if (info.levels.indexOf(k) >= 0) html += '<div>√ ' + map[k] + '</div>';
+    else html += '<div style="color:#ccc;">  ' + map[k] + '</div>';
+  }
+  var durMap = {'1h':'1小时','4h':'4小时','8h':'8小时','24h':'24小时','7d':'7天','forever':'永久'};
+  var durText = durMap[info.duration] || (info.duration.replace('h','') + '小时');
+  html += '<div style="margin-top:8px;border-top:1px solid #f0f0f0;padding-top:8px;">封禁' + durText + '</div>';
+  document.getElementById('banDetailBody').innerHTML = html;
+  openModal('banDetailModal');
+}
 
 // ===== Init =====
 window.addEventListener('DOMContentLoaded', function() {
