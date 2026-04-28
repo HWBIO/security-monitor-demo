@@ -160,7 +160,7 @@
     <table>
       <thead><tr>
         <th><input type="checkbox" id="coin-selectAll" onchange="coin_toggleSelectAll()"></th>
-        <th>UID</th><th>VIP</th><th>触发理由</th><th>关联UID</th><th>Device ID</th><th>设备类型</th><th>APP版本</th><th>触发次数</th><th>操作</th>
+        <th>UID</th><th>VIP</th><th>触发理由</th><th>触发次数</th><th>关联UID</th><th>Device ID</th><th>设备类型</th><th>APP版本</th><th>操作</th>
       </tr></thead>
       <tbody id="coin-tbody"></tbody>
     </table>
@@ -183,7 +183,7 @@
     <table>
       <thead><tr>
         <th><input type="checkbox" id="api-selectAll" onchange="api_toggleSelectAll()"></th>
-        <th>UID</th><th>VIP</th><th>触发理由</th><th>关联UID</th><th>Device ID</th><th>接口异常类型</th><th>触发次数</th><th>操作</th>
+        <th>UID</th><th>VIP</th><th>触发理由</th><th>触发次数</th><th>关联UID</th><th>Device ID</th><th>接口异常类型</th><th>操作</th>
       </tr></thead>
       <tbody id="api-tbody"></tbody>
     </table>
@@ -423,7 +423,7 @@ function coin_render() {
     var tr = document.createElement('tr'); if (b) tr.className = 'banned';
     var vipH = u.vip > 0 ? '<span class="tag tag-vip">VIP '+u.vip+'</span>' : '—';
     var actH = b ? '<span style="color:#aaa;">已封禁</span>' : '<span class="action-link" onclick="coin_singleBan(\''+u.uid+'\')">封禁</span><span style="color:#d0d0d0;margin:0 4px;">|</span><span class="action-exempt" onclick="coin_exempt(\''+u.uid+'\')">豁免</span>';
-    tr.innerHTML = '<td><input type="checkbox" class="coin-rowck" data-uid="'+u.uid+'" '+(coin_sel[u.uid]?'checked ':'')+(b?'disabled':'')+' onchange="coin_toggle(\''+u.uid+'\')"></td><td class="uid-cell">'+u.uid+'</td><td>'+vipH+'</td><td><span class="tag tag-reason">'+u.triggerReason+'</span></td><td style="font-size:12px;color:#888;">'+u.relatedUid+'</td><td style="font-family:monospace;font-size:12px;">'+u.deviceId+'</td><td>'+u.deviceType+'</td><td>'+u.appVersion+'</td><td><span class="tag tag-count">'+u.triggerCount+'次</span></td><td>'+actH+'</td>';
+    tr.innerHTML = '<td><input type="checkbox" class="coin-rowck" data-uid="'+u.uid+'" '+(coin_sel[u.uid]?'checked ':'')+(b?'disabled':'')+' onchange="coin_toggle(\''+u.uid+'\')"></td><td class="uid-cell">'+u.uid+'</td><td>'+vipH+'</td><td><span class="tag tag-reason">'+u.triggerReason+'</span></td><td><span class="tag tag-count">'+u.triggerCount+'次</span></td><td style="font-size:12px;color:#888;">'+u.relatedUid+'</td><td style="font-family:monospace;font-size:12px;">'+u.deviceId+'</td><td>'+u.deviceType+'</td><td>'+u.appVersion+'</td><td>'+actH+'</td>';
     tbody.appendChild(tr);
   }
   document.getElementById('coin-totalCount').textContent = ac;
@@ -474,7 +474,7 @@ function api_render() {
     var tr = document.createElement('tr'); if (b) tr.className = 'banned';
     var vipH = u.vip > 0 ? '<span class="tag tag-vip">VIP '+u.vip+'</span>' : '—';
     var actH = b ? '<span style="color:#aaa;">已封禁</span>' : '<span class="action-link" onclick="api_singleBan(\''+u.uid+'\')">封禁</span><span style="color:#d0d0d0;margin:0 4px;">|</span><span class="action-exempt" onclick="api_exempt(\''+u.uid+'\')">豁免</span>';
-    tr.innerHTML = '<td><input type="checkbox" class="api-rowck" data-uid="'+u.uid+'" '+(api_sel[u.uid]?'checked ':'')+(b?'disabled':'')+' onchange="api_toggle(\''+u.uid+'\')"></td><td class="uid-cell">'+u.uid+'</td><td>'+vipH+'</td><td><span class="tag tag-reason">'+u.triggerReason+'</span></td><td style="font-size:12px;color:#888;">'+u.relatedUid+'</td><td style="font-family:monospace;font-size:12px;">'+u.deviceId+'</td><td><span class="tag tag-api">'+u.apiType+'</span></td><td><span class="tag tag-count">'+u.triggerCount+'次</span></td><td>'+actH+'</td>';
+    tr.innerHTML = '<td><input type="checkbox" class="api-rowck" data-uid="'+u.uid+'" '+(api_sel[u.uid]?'checked ':'')+(b?'disabled':'')+' onchange="api_toggle(\''+u.uid+'\')"></td><td class="uid-cell">'+u.uid+'</td><td>'+vipH+'</td><td><span class="tag tag-reason">'+u.triggerReason+'</span></td><td><span class="tag tag-count">'+u.triggerCount+'次</span></td><td style="font-size:12px;color:#888;">'+u.relatedUid+'</td><td style="font-family:monospace;font-size:12px;">'+u.deviceId+'</td><td><span class="tag tag-api">'+u.apiType+'</span></td><td>'+actH+'</td>';
     tbody.appendChild(tr);
   }
   document.getElementById('api-totalCount').textContent = ac;
