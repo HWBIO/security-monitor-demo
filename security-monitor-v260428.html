@@ -118,6 +118,12 @@
   .custom-duration.show { display: flex; }
   .error-msg { color: #ff4d4f; font-size: 12px; margin-top: 4px; display: none; }
   .error-msg.show { display: block; }
+  .rule-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 6px 8px; background: #fafafa; border-radius: 4px; }
+  .rule-row input[type="number"] { width: 80px; padding: 5px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; }
+  .rule-row select { padding: 5px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; }
+  .rule-row .rule-hint { font-size: 12px; color: #1890ff; min-width: 160px; }
+  .rule-row .rule-del { color: #ff4d4f; cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; }
+  .rule-row .rule-del:hover { color: #cf1322; }
   .confirm-msg { font-size: 14px; line-height: 1.6; }
   .confirm-list { margin: 10px 0; padding: 10px; background: #fafafa; border-radius: 4px; font-size: 13px; max-height: 180px; overflow-y: auto; }
   .confirm-list-item { padding: 2px 0; }
@@ -230,32 +236,15 @@
         </div>
       </div>
       <div class="form-section">
-        <div class="form-section-title">二、阈值配置（二选一）</div>
-        <div class="radio-group" style="margin-bottom:12px;">
-          <label><input type="radio" name="coin-thresholdType" value="hour" checked onchange="coin_toggleThresholdType()"> 按小时监控</label>
-          <label><input type="radio" name="coin-thresholdType" value="day" onchange="coin_toggleThresholdType()"> 按天监控</label>
-        </div>
-        <div id="coin-hourBox">
-          <div class="form-row">
-            <label>小时阈值</label>
-            <input type="number" id="coin-hourValue" min="1" placeholder="输入数值" oninput="coin_updateRealValue()">
-            <select id="coin-hourUnit" onchange="coin_updateRealValue()">
-              <option value="10000">万</option><option value="10000000">千万</option><option value="100000000">亿</option>
-            </select>
+        <div class="form-section-title">二、阈值配置</div>
+        <div class="form-row" style="align-items:flex-start;">
+          <label style="padding-top:6px;">触发条件</label>
+          <div style="flex:1;">
+            <div id="coin-rulesContainer"></div>
+            <button class="btn" style="margin-top:8px;padding:4px 12px;font-size:12px;" onclick="coin_addRuleRow()">+ 添加规则</button>
+            <div class="error-msg" id="coin-thresholdError">请填写完整的阈值配置</div>
           </div>
-          <div class="form-real-value" id="coin-hourReal"></div>
         </div>
-        <div id="coin-dayBox" style="display:none;">
-          <div class="form-row">
-            <label>天阈值</label>
-            <input type="number" id="coin-dayValue" min="1" placeholder="输入数值" oninput="coin_updateRealValue()">
-            <select id="coin-dayUnit" onchange="coin_updateRealValue()">
-              <option value="10000">万</option><option value="10000000">千万</option><option value="100000000">亿</option>
-            </select>
-          </div>
-          <div class="form-real-value" id="coin-dayReal"></div>
-        </div>
-        <div class="error-msg" id="coin-thresholdError">请填写阈值数值</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -504,11 +493,113 @@ function coin_singleBan(uid) { coin_pending=[uid]; var u=coin_find(uid);if(!u)re
 function coin_batchBan() { var a=[];for(var k in coin_sel)if(coin_sel[k])a.push(k);if(!a.length)return; coin_pending=a; document.getElementById('confirmTitle').textContent='确认批量封禁';document.getElementById('confirmMsg').textContent='确定要封禁以下 '+a.length+' 个用户吗？'; var h='';for(var i=0;i<a.length;i++){var u=coin_find(a[i]);if(u)h+='<div class="confirm-list-item">UID: '+a[i]+' | 设备: '+u.deviceId+' | IP: '+u.ip+'</div>';} document.getElementById('confirmList').innerHTML=h; banCallback=coin_execBan; openModal('confirmModal'); }
 function coin_execBan() { var fi=Math.random()<0.1?Math.floor(Math.random()*coin_pending.length):-1;var f=false;var ls=[];var lcs=document.querySelectorAll('.confirm-banlevel:checked');for(var i=0;i<lcs.length;i++)ls.push(lcs[i].value);var dr=document.querySelector('input[name="confirm-duration"]:checked');var dur=dr?dr.value:'24h';if(dur==='custom'){var ch=parseInt(document.getElementById('confirm-customHours').value);dur=ch+'h';} for(var i=0;i<coin_pending.length;i++){var u=coin_find(coin_pending[i]);if(!u)continue;if(i===fi){f=true;}else{u.banned=true;u.banInfo={levels:ls,duration:dur};delete coin_sel[coin_pending[i]];}} closeModal('confirmModal');if(f)showToast('部分封禁失败（错误码: BAN_003）','error');else showToast('已成功封禁 '+coin_pending.length+' 个用户','success');coin_pending=[];coin_render(); }
 function coin_exempt(uid) { for(var i=0;i<coin_data.length;i++){if(coin_data[i].uid===uid){coin_data[i].exempt=true;break;}}delete coin_sel[uid];showToast('UID '+uid+' 已标记为误判豁免','success');coin_render(); }
-function coin_toggleThresholdType() { var h=document.querySelector('input[name="coin-thresholdType"][value="hour"]').checked; document.getElementById('coin-hourBox').style.display=h?'':'none'; document.getElementById('coin-dayBox').style.display=h?'none':''; }
-function coin_updateRealValue() { var hv=document.getElementById('coin-hourValue').value,hu=parseInt(document.getElementById('coin-hourUnit').value);var dv=document.getElementById('coin-dayValue').value,du=parseInt(document.getElementById('coin-dayUnit').value);document.getElementById('coin-hourReal').textContent=(hv&&parseInt(hv)>0)?'≈ '+formatNum(parseInt(hv)*hu)+' 金币':'';document.getElementById('coin-dayReal').textContent=(dv&&parseInt(dv)>0)?'≈ '+formatNum(parseInt(dv)*du)+' 金币':''; }
+/* ===== 多行阈值规则 ===== */
+var coin_defaultRules = [
+  { minutes: 60, value: 500, unit: '10000' },
+  { minutes: 1440, value: 3000, unit: '100000000' },
+  { minutes: 30, value: 200, unit: '10000' }
+];
+
+function coin_renderRules(rules) {
+  var c = document.getElementById('coin-rulesContainer');
+  c.innerHTML = '';
+  for (var i = 0; i < rules.length; i++) {
+    var r = rules[i];
+    var div = document.createElement('div');
+    div.className = 'rule-row';
+    div.innerHTML =
+      '<input type="number" class="r-min" min="1" value="' + (r.minutes||'') + '" placeholder="分钟数" oninput="coin_updateRowHint(this)">' +
+      '<span style="font-size:13px;color:#333;white-space:nowrap;">分钟内，金币超过</span>' +
+      '<input type="number" class="r-val" min="1" value="' + (r.value||'') + '" placeholder="数值" oninput="coin_updateRowHint(this)">' +
+      '<select class="r-unit" onchange="coin_updateRowHint(this)">' +
+        '<option value="10000"' + (r.unit==='10000'?' selected':'') + '>万</option>' +
+        '<option value="1000000"' + (r.unit==='1000000'?' selected':'') + '>M</option>' +
+        '<option value="100000000"' + (r.unit==='100000000'?' selected':'') + '>亿</option>' +
+      '</select>' +
+      '<span class="rule-hint"></span>' +
+      '<span class="rule-del" onclick="coin_removeRuleRow(this)" title="删除此规则">&times;</span>';
+    c.appendChild(div);
+    coin_updateRowHint(div.querySelector('.r-min'));
+  }
+}
+
+function coin_addRuleRow() {
+  var c = document.getElementById('coin-rulesContainer');
+  var div = document.createElement('div');
+  div.className = 'rule-row';
+  div.innerHTML =
+    '<input type="number" class="r-min" min="1" placeholder="分钟数" oninput="coin_updateRowHint(this)">' +
+    '<span style="font-size:13px;color:#333;white-space:nowrap;">分钟内，金币超过</span>' +
+    '<input type="number" class="r-val" min="1" placeholder="数值" oninput="coin_updateRowHint(this)">' +
+    '<select class="r-unit" onchange="coin_updateRowHint(this)">' +
+      '<option value="10000">万</option>' +
+      '<option value="1000000">M</option>' +
+      '<option value="100000000">亿</option>' +
+    '</select>' +
+    '<span class="rule-hint"></span>' +
+    '<span class="rule-del" onclick="coin_removeRuleRow(this)" title="删除此规则">&times;</span>';
+  c.appendChild(div);
+}
+
+function coin_removeRuleRow(el) {
+  var row = el.parentNode;
+  row.parentNode.removeChild(row);
+}
+
+function coin_updateRowHint(el) {
+  var row = el.parentNode;
+  var min = row.querySelector('.r-min').value;
+  var val = row.querySelector('.r-val').value;
+  var unit = row.querySelector('.r-unit').value;
+  var hint = row.querySelector('.rule-hint');
+  if (min && parseInt(min) > 0 && val && parseInt(val) > 0) {
+    hint.textContent = '≈ ' + formatNum(parseInt(val) * parseInt(unit)) + ' 金币 / ' + min + ' 分钟';
+  } else {
+    hint.textContent = '';
+  }
+}
+
+function coin_getRules() {
+  var rows = document.querySelectorAll('#coin-rulesContainer .rule-row');
+  var rules = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = {
+      minutes: rows[i].querySelector('.r-min').value,
+      value: rows[i].querySelector('.r-val').value,
+      unit: rows[i].querySelector('.r-unit').value
+    };
+    rules.push(r);
+  }
+  return rules;
+}
+
+function coin_openStrategy() {
+  coin_renderRules(coin_defaultRules);
+  openModal('coin-strategyModal');
+}
 function coin_openStrategy() { openModal('coin-strategyModal'); }
 (function(){var rs=document.querySelectorAll('input[name="confirm-duration"]');for(var i=0;i<rs.length;i++)rs[i].addEventListener('change',function(){var c=document.getElementById('confirm-customRadio').checked;var el=document.getElementById('confirm-customDuration');if(c)el.classList.add('show');else el.classList.remove('show');});})();
-function coin_saveStrategy() { var v=true;var isH=document.querySelector('input[name="coin-thresholdType"][value="hour"]').checked;var val=document.getElementById(isH?'coin-hourValue':'coin-dayValue').value;if(!val||parseInt(val)<=0){document.getElementById('coin-thresholdError').classList.add('show');v=false;}else{document.getElementById('coin-thresholdError').classList.remove('show');}if(!v)return;closeModal('coin-strategyModal');showToast('金币监控策略已保存','success'); }
+function coin_saveStrategy() {
+  var rules = coin_getRules();
+  var v = true;
+  if (!rules.length) { v = false; }
+  for (var i = 0; i < rules.length; i++) {
+    var r = rules[i];
+    if (!r.minutes || parseInt(r.minutes) <= 0 || !r.value || parseInt(r.value) <= 0) {
+      v = false;
+      break;
+    }
+  }
+  if (!v) {
+    document.getElementById('coin-thresholdError').classList.add('show');
+    return;
+  } else {
+    document.getElementById('coin-thresholdError').classList.remove('show');
+  }
+  coin_defaultRules = rules;
+  closeModal('coin-strategyModal');
+  showToast('金币监控策略已保存（' + rules.length + ' 条规则）', 'success');
+}
 
 // ================================================================
 // ===== MODULE 2: 接口异常 =====
